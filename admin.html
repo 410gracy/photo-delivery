@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photo Delivery — 管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --white:#fff;--off:#f7f6f4;--bg:#f2f0ed;--border:#e0ddd8;
+    --text:#1a1816;--muted:#9a9590;--accent:#2c6e49;--accent-h:#235a3c;
+    --error:#b91c1c;
+    --shadow-sm:0 1px 4px rgba(0,0,0,0.07);--shadow-lg:0 12px 48px rgba(0,0,0,0.15);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Jost',sans-serif;font-weight:300;min-height:100vh;}
+  .topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 2rem;height:56px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-sm);}
+  .logo{font-family:'Raleway',sans-serif;font-size:0.75rem;font-weight:400;letter-spacing:0.2em;text-transform:uppercase;color:var(--text);}
+  .logo em{font-style:normal;color:var(--accent);}
+  .badge{font-size:0.65rem;font-weight:500;letter-spacing:0.08em;background:#fef3e2;color:#b45309;border:1px solid #fcd88a;padding:0.2rem 0.6rem;border-radius:100px;}
+  .wrap{max-width:640px;margin:0 auto;padding:2.5rem 1.5rem;}
+  h2{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:400;margin-bottom:0.35rem;}
+  .sub{font-size:0.78rem;color:var(--muted);margin-bottom:2rem;line-height:1.6;}
+  .card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin-bottom:1.25rem;box-shadow:var(--shadow-sm);}
+  .card-title{font-size:0.72rem;font-weight:500;letter-spacing:0.09em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;}
+  .field{margin-bottom:0.85rem;}
+  .field:last-child{margin-bottom:0;}
+  .field-label{font-size:0.68rem;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:0.3rem;}
+  input[type=text],input[type=password],input[type=date]{width:100%;background:var(--off);border:1.5px solid var(--border);color:var(--text);font-family:'Jost',sans-serif;font-size:0.84rem;font-weight:300;padding:0.65rem 0.9rem;border-radius:6px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(44,110,73,0.1);background:var(--white);}
+  input::placeholder{color:var(--muted);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;}
+  @media(max-width:480px){.grid2{grid-template-columns:1fr;}}
+  .inline-error{font-size:0.75rem;color:var(--error);background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:0.6rem 0.9rem;margin-bottom:1rem;display:none;}
+  .btn-primary{background:var(--text);color:var(--white);border:none;font-family:'Jost',sans-serif;font-size:0.82rem;font-weight:500;letter-spacing:0.08em;padding:0.8rem 1.5rem;border-radius:6px;cursor:pointer;transition:background 0.2s;width:100%;}
+  .btn-primary:hover{background:#333;}
+  .result-card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin-top:1.25rem;box-shadow:var(--shadow-sm);display:none;}
+  .result-label{font-size:0.68rem;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;}
+  .url-box{background:var(--off);border:1.5px solid var(--border);border-radius:6px;padding:0.7rem 0.9rem;font-size:0.74rem;word-break:break-all;color:var(--text);letter-spacing:0.02em;margin-bottom:0.75rem;line-height:1.6;}
+  .row{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;}
+  .copy-btn{background:var(--accent);color:#fff;border:none;font-family:'Jost',sans-serif;font-size:0.75rem;font-weight:500;letter-spacing:0.08em;padding:0.5rem 1.1rem;border-radius:5px;cursor:pointer;transition:background 0.2s;}
+  .copy-btn:hover{background:var(--accent-h);}
+  .copy-done{font-size:0.72rem;color:var(--accent);display:none;}
+  .shorten-btn{background:var(--off);color:var(--text);border:1.5px solid var(--border);font-family:'Jost',sans-serif;font-size:0.75rem;font-weight:500;letter-spacing:0.08em;padding:0.5rem 1.1rem;border-radius:5px;cursor:pointer;transition:all 0.2s;}
+  .shorten-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .shorten-btn:disabled{opacity:0.5;cursor:default;}
+  .short-url-row{margin-top:0.75rem;display:none;}
+  .short-url-box{background:var(--off);border:1.5px solid var(--accent);border-radius:6px;padding:0.6rem 0.9rem;font-size:0.82rem;word-break:break-all;color:var(--text);margin-bottom:0.5rem;}
+
+  /* SIZE BUTTONS */
+  .size-btns{display:flex;gap:0.4rem;}
+  .size-btn{flex:1;background:var(--off);border:1.5px solid var(--border);color:var(--muted);font-family:'Jost',sans-serif;font-size:0.72rem;font-weight:500;letter-spacing:0.05em;padding:0.5rem 0;border-radius:6px;cursor:pointer;transition:all 0.15s;text-align:center;}
+  .size-btn.active{background:var(--text);color:#fff;border-color:var(--text);}
+
+  /* PREVIEW */
+  .preview-section{display:none;margin-bottom:1.25rem;}
+  .preview-section-label{font-size:0.68rem;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;}
+  .preview-cover{position:relative;width:100%;height:240px;border-radius:8px;overflow:hidden;background:#d0ccc7;}
+  .preview-cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+  .preview-grad{position:absolute;inset:0;background:rgba(0,0,0,0.5);}
+  .preview-content{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1rem;color:#fff;}
+  .preview-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);font-size:0.75rem;letter-spacing:0.05em;}
+  #prevTitle{font-family:'Raleway',sans-serif;font-size:1.8rem;font-weight:200;letter-spacing:0.22em;text-transform:uppercase;line-height:1.15;margin-bottom:0.5rem;transition:font-size 0.2s;}
+  #prevDate{font-size:0.6rem;font-weight:400;letter-spacing:0.2em;text-transform:uppercase;opacity:0.75;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">Photo <em>Delivery</em></div>
+  <div class="badge">管理画面</div>
+</div>
+
+<div class="wrap">
+  <h2>納品URLを作成</h2>
+  <div class="sub">Google Driveのフォルダ情報を入力すると、クライアントに渡すURLが生成されます。APIキー不要。</div>
+
+  <div class="card">
+    <div class="card-title">アルバム情報</div>
+    <div class="field">
+      <div class="field-label">Google Drive フォルダURL</div>
+      <input type="text" id="folderUrl" placeholder="https://drive.google.com/drive/folders/...">
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <div class="field-label">案件名</div>
+        <input type="text" id="albumLabel" placeholder="例: 2026.05.16 陸上競技大会">
+      </div>
+      <div class="field">
+        <div class="field-label">撮影日</div>
+        <input type="text" id="shootDate" placeholder="例: 2026年5月16日">
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <div class="field-label">公開期限</div>
+        <input type="date" id="expiryDate">
+      </div>
+      <div class="field">
+        <div class="field-label">合言葉（任意）</div>
+        <input type="password" id="pwInput" placeholder="設定しない場合は空欄">
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <div class="field-label">カバー写真の番号（任意）</div>
+        <input type="text" id="coverNum" placeholder="例: 3（空欄なら1枚目）">
+      </div>
+      <div class="field">
+        <div class="field-label">タイトルフォント</div>
+        <select id="fontSelect" style="width:100%;background:var(--off);border:1.5px solid var(--border);color:var(--text);font-family:'Jost',sans-serif;font-size:0.84rem;font-weight:300;padding:0.65rem 0.9rem;border-radius:6px;outline:none;">
+          <option value="raleway">Raleway（英語・デフォルト）</option>
+          <option value="noto-serif">Noto Serif JP（明朝体）</option>
+          <option value="noto-sans">Noto Sans JP（細ゴシック）</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">タイトルサイズ</div>
+      <div class="size-btns">
+        <button class="size-btn" data-size="2.0" onclick="setSize(2.0)">S</button>
+        <button class="size-btn active" data-size="3.2" onclick="setSize(3.2)">M</button>
+        <button class="size-btn" data-size="4.2" onclick="setSize(4.2)">L</button>
+        <button class="size-btn" data-size="5.5" onclick="setSize(5.5)">XL</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label">背景色</div>
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <input type="color" id="bgColor" value="#ffffff" style="width:44px;height:36px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;padding:2px;background:var(--off);">
+        <div id="colorSwatches" style="display:flex;gap:0.4rem;">
+          <button onclick="setBg('#ffffff')" style="width:26px;height:26px;border-radius:50%;background:#ffffff;border:1.5px solid #ddd;cursor:pointer;" title="白"></button>
+          <button onclick="setBg('#f7f6f4')" style="width:26px;height:26px;border-radius:50%;background:#f7f6f4;border:1.5px solid #ddd;cursor:pointer;" title="オフホワイト"></button>
+          <button onclick="setBg('#f0ece4')" style="width:26px;height:26px;border-radius:50%;background:#f0ece4;border:1.5px solid #ddd;cursor:pointer;" title="クリーム"></button>
+          <button onclick="setBg('#1a1816')" style="width:26px;height:26px;border-radius:50%;background:#1a1816;border:1.5px solid #555;cursor:pointer;" title="ブラック"></button>
+          <button onclick="setBg('#e8e4de')" style="width:26px;height:26px;border-radius:50%;background:#e8e4de;border:1.5px solid #ddd;cursor:pointer;" title="グレージュ"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="preview-section" id="previewSection">
+    <div class="preview-section-label">カバープレビュー</div>
+    <div class="preview-cover">
+      <img id="prevImg" src="" alt="" style="display:none;">
+      <div class="preview-grad"></div>
+      <div class="preview-placeholder" id="prevPlaceholder">フォルダURLを入力すると写真が表示されます</div>
+      <div class="preview-content">
+        <div id="prevTitle">アルバムタイトル</div>
+        <div id="prevDate"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="inline-error" id="genError"></div>
+  <button class="btn-primary" onclick="generateUrl()">納品URLを生成する</button>
+
+  <div class="result-card" id="resultCard">
+    <div class="result-label">クライアントに渡すURL</div>
+    <div class="url-box" id="resultUrl"></div>
+    <div class="row">
+      <button class="copy-btn" onclick="copyUrl()">URLをコピー</button>
+      <button class="shorten-btn" id="shortenBtn" onclick="shortenUrl()">短縮URLを作成</button>
+      <span class="copy-done" id="copyDone">✓ コピーしました</span>
+    </div>
+    <div class="short-url-row" id="shortUrlRow">
+      <div class="result-label" style="margin-top:0.75rem;">短縮URL</div>
+      <div class="short-url-box" id="shortUrlBox"></div>
+      <div class="row">
+        <button class="copy-btn" onclick="copyShortUrl()">短縮URLをコピー</button>
+        <span class="copy-done" id="copyShortDone">✓ コピーしました</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_KEY = 'AIzaSyB5icooN6gEMtDLpxMQH2-5JL0NcPvNdz8';
+
+let currentTitleSize = 3.2;
+let lastPreviewFolderId = null;
+let folderDebounceTimer;
+let previewFiles = null;
+const loadedFonts = new Set(['raleway']);
+const FONT_INFO = {
+  'raleway':    { family:"'Raleway',sans-serif",    weight:'200', url: null },
+  'noto-serif': { family:"'Noto Serif JP',serif",   weight:'300', url:'https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@200;300&display=swap' },
+  'noto-sans':  { family:"'Noto Sans JP',sans-serif",weight:'200', url:'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;200&display=swap' },
+};
+
+window.addEventListener('load', () => {
+  const def = new Date();
+  def.setDate(def.getDate() + 30);
+  document.getElementById('expiryDate').value = def.toISOString().split('T')[0];
+  ['albumLabel','shootDate','fontSelect','folderUrl'].forEach(id => {
+    document.getElementById(id).addEventListener('input', refreshPreview);
+  });
+  document.getElementById('coverNum').addEventListener('input', () => {
+    if (previewFiles) {
+      showPreviewPhoto();
+    } else {
+      const folderId = extractFolderId(document.getElementById('folderUrl').value.trim());
+      if (folderId) { clearTimeout(folderDebounceTimer); lastPreviewFolderId = null; fetchPreviewPhoto(folderId); }
+    }
+  });
+});
+
+function setBg(color) { document.getElementById('bgColor').value = color; }
+
+function setSize(rem) {
+  currentTitleSize = rem;
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', parseFloat(b.dataset.size) === rem));
+  refreshPreview();
+}
+
+function refreshPreview() {
+  document.getElementById('previewSection').style.display = 'block';
+
+  const title = document.getElementById('albumLabel').value.trim() || 'アルバムタイトル';
+  const date  = document.getElementById('shootDate').value.trim();
+  const fontKey = document.getElementById('fontSelect').value;
+  const f = FONT_INFO[fontKey];
+
+  if (f.url && !loadedFonts.has(fontKey)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet'; link.href = f.url;
+    document.head.appendChild(link);
+    loadedFonts.add(fontKey);
+  }
+
+  const titleEl = document.getElementById('prevTitle');
+  titleEl.textContent = title;
+  titleEl.style.fontFamily = f.family;
+  titleEl.style.fontWeight = f.weight;
+  titleEl.style.fontSize   = currentTitleSize * 0.5 + 'rem'; // scaled for preview
+
+  document.getElementById('prevDate').textContent = date;
+
+  const folderId = extractFolderId(document.getElementById('folderUrl').value.trim());
+  if (folderId && folderId !== lastPreviewFolderId) {
+    clearTimeout(folderDebounceTimer);
+    folderDebounceTimer = setTimeout(() => fetchPreviewPhoto(folderId), 700);
+  }
+}
+
+async function fetchPreviewPhoto(folderId) {
+  lastPreviewFolderId = folderId;
+  try {
+    const url = 'https://www.googleapis.com/drive/v3/files'
+      + '?q=' + encodeURIComponent("'" + folderId + "' in parents and mimeType contains 'image/'")
+      + '&fields=files(id,name)&orderBy=name&pageSize=1000&key=' + API_KEY;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.files && data.files.length > 0) {
+      data.files.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:'base'}));
+      previewFiles = data.files;
+      showPreviewPhoto();
+    }
+  } catch(e) {}
+}
+
+function showPreviewPhoto() {
+  if (!previewFiles || previewFiles.length === 0) return;
+  const coverNum = Math.max(parseInt(document.getElementById('coverNum').value.trim()) || 1, 1);
+  const idx = Math.min(coverNum - 1, previewFiles.length - 1);
+  const img = document.getElementById('prevImg');
+  img.onload = () => {
+    img.style.display = 'block';
+    document.getElementById('prevPlaceholder').style.display = 'none';
+  };
+  img.src = 'https://drive.google.com/thumbnail?id=' + previewFiles[idx].id + '&sz=w800';
+}
+
+function extractFolderId(url) {
+  const m = url.match(/folders\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+function showError(msg) {
+  const el = document.getElementById('genError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function generateUrl() {
+  document.getElementById('genError').style.display = 'none';
+  document.getElementById('resultCard').style.display = 'none';
+
+  const folderUrl = document.getElementById('folderUrl').value.trim();
+  if (!folderUrl) { showError('Google DriveのフォルダURLを入力してください'); return; }
+  const folderId = extractFolderId(folderUrl);
+  if (!folderId) { showError('正しいGoogle DriveフォルダURLを入力してください'); return; }
+
+  const coverNum = parseInt(document.getElementById('coverNum').value.trim(), 10);
+  const params = {
+    folder:     folderId,
+    title:      document.getElementById('albumLabel').value.trim(),
+    date:       document.getElementById('shootDate').value.trim(),
+    expiry:     document.getElementById('expiryDate').value,
+    pw:         document.getElementById('pwInput').value,
+    bg:         document.getElementById('bgColor').value,
+    cover:      (coverNum >= 1) ? coverNum - 1 : 0,
+    font:       document.getElementById('fontSelect').value,
+    titleSize:  currentTitleSize,
+  };
+
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(params))));
+  const base = window.location.href.replace(/\/admin(\.html)?(\?.*)?$/, '/delivery.html');
+  const url = base + '?d=' + encoded;
+
+  document.getElementById('resultUrl').textContent = url;
+  document.getElementById('resultCard').style.display = 'block';
+  document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+}
+
+function copyUrl() {
+  const url = document.getElementById('resultUrl').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    const el = document.getElementById('copyDone');
+    el.style.display = 'inline';
+    setTimeout(() => el.style.display = 'none', 2000);
+  }).catch(() => {
+    alert('コピーできませんでした。URLを手動でコピーしてください。');
+  });
+}
+
+async function shortenUrl() {
+  const url = document.getElementById('resultUrl').textContent.trim();
+  if (!url) return;
+  const btn = document.getElementById('shortenBtn');
+  btn.disabled = true;
+  btn.textContent = '作成中…';
+  try {
+    const res = await fetch('https://is.gd/create.php?format=simple&url=' + encodeURIComponent(url));
+    const short = await res.text();
+    if (!short.startsWith('http')) throw new Error('short url error');
+    document.getElementById('shortUrlBox').textContent = short;
+    document.getElementById('shortUrlRow').style.display = 'block';
+    btn.textContent = '再作成';
+  } catch(e) {
+    alert('短縮URLの作成に失敗しました。時間をおいてもう一度お試しください。');
+    btn.textContent = '短縮URLを作成';
+  }
+  btn.disabled = false;
+}
+
+function copyShortUrl() {
+  const url = document.getElementById('shortUrlBox').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    const el = document.getElementById('copyShortDone');
+    el.style.display = 'inline';
+    setTimeout(() => el.style.display = 'none', 2000);
+  }).catch(() => {
+    alert('コピーできませんでした。URLを手動でコピーしてください。');
+  });
+}
+</script>
+</body>
+</html>

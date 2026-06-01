@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photo Delivery</title>
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200;300;400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--white:#fff;--bg:#fff;--border:#ebebeb;--text:#1a1816;--muted:#aaa;--accent:#2c6e49;--accent-h:#235a3c;--warn:#b45309;--error:#b91c1c;--shadow-lg:0 12px 48px rgba(0,0,0,0.12);}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Jost',sans-serif;font-weight:300;min-height:100vh;}
+  .topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+  .logo{font-family:'Raleway',sans-serif;font-size:0.75rem;font-weight:400;letter-spacing:0.2em;text-transform:uppercase;color:var(--text);}
+  .logo em{font-style:normal;}
+  .expiry-pill{font-size:0.65rem;letter-spacing:0.06em;color:var(--muted);border:1px solid var(--border);padding:0.2rem 0.65rem;border-radius:100px;display:none;}
+  .expiry-pill.warn{color:var(--warn);border-color:#fcd88a;}
+  .expiry-pill.expired{color:var(--error);border-color:#fca5a5;}
+
+  /* PASSWORD GATE */
+  .pw-gate{display:none;position:fixed;inset:0;z-index:100;background:rgba(242,240,237,0.97);backdrop-filter:blur(8px);align-items:center;justify-content:center;}
+  .pw-gate.open{display:flex;}
+  .pw-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:2.5rem 2rem;width:100%;max-width:340px;box-shadow:var(--shadow-lg);text-align:center;}
+  .pw-icon{width:48px;height:48px;border-radius:50%;background:#eef4f0;border:1.5px solid #c2dece;display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin:0 auto 1.1rem;}
+  .pw-title{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:400;margin-bottom:0.3rem;}
+  .pw-sub{font-size:0.75rem;color:var(--muted);margin-bottom:1.3rem;}
+  .pw-input{text-align:center;letter-spacing:0.12em;font-size:1rem;margin-bottom:0.75rem;width:100%;background:var(--off);border:1.5px solid var(--border);color:var(--text);font-family:'Jost',sans-serif;padding:0.65rem 0.9rem;border-radius:6px;outline:none;}
+  .pw-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(44,110,73,0.1);}
+  .pw-btn{width:100%;background:var(--text);color:var(--white);border:none;font-family:'Jost',sans-serif;font-size:0.82rem;font-weight:500;padding:0.75rem;border-radius:6px;cursor:pointer;}
+  .pw-btn:hover{background:#333;}
+  .pw-error{font-size:0.72rem;color:var(--error);margin-top:0.5rem;min-height:1em;}
+
+  /* COVER */
+  .cover{display:none;position:relative;height:72vh;min-height:320px;overflow:hidden;}
+  .cover-img{width:100%;height:100%;object-fit:cover;display:block;}
+  .cover-grad{position:absolute;inset:0;background:rgba(0,0,0,0.50);}
+  .cover-content{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;color:#fff;}
+  .cover-title{font-family:'Raleway',sans-serif;font-size:3.2rem;font-weight:200;letter-spacing:0.22em;text-transform:uppercase;line-height:1.1;margin-bottom:1rem;}
+  .cover-eyebrow{font-family:'Raleway',sans-serif;font-size:0.7rem;font-weight:400;letter-spacing:0.22em;text-transform:uppercase;opacity:0.85;margin-bottom:2rem;}
+  .cover-meta{display:none;}
+  .cover-dl{display:inline-block;border:1px solid rgba(255,255,255,0.7);color:#fff;font-family:'Raleway',sans-serif;font-size:0.65rem;font-weight:500;letter-spacing:0.22em;text-transform:uppercase;text-decoration:none;padding:0.8rem 2.2rem;transition:background 0.2s;}
+  .cover-dl:hover{background:rgba(255,255,255,0.15);}
+  @media(max-width:720px){.cover{height:55vh;}.cover-title{font-size:1.8rem;letter-spacing:0.15em;}}
+
+  /* GALLERY */
+  .gallery-wrap{padding:2px 2px 4rem;}
+  @media(max-width:720px){.gallery-wrap{padding:2px 2px 2.5rem;}}
+  .gallery{display:flex;gap:2px;align-items:flex-start;}
+  .gallery-col{flex:1;display:flex;flex-direction:column;gap:2px;}
+  .photo-card{overflow:hidden;position:relative;cursor:pointer;background:#fff;}
+  .photo-card img{width:100%;height:auto;display:block;}
+  .photo-card-overlay{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:flex-end;padding:8px;}
+  .card-dl-btn{width:32px;height:32px;background:rgba(255,255,255,0.88);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.75rem;color:var(--text);opacity:0;flex-shrink:0;}
+  @media(hover:hover){
+    .photo-card img{transition:opacity 0.25s;}
+    .photo-card:hover img{opacity:0.82;}
+    .card-dl-btn{transition:opacity 0.2s;}
+    .photo-card:hover .card-dl-btn{opacity:1;}
+  }
+
+  .loading{padding:5rem 2rem;text-align:center;color:var(--muted);font-size:0.82rem;letter-spacing:0.05em;}
+  .empty-state{padding:5rem 2rem;text-align:center;}
+  .empty-title{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:400;margin-bottom:0.5rem;}
+  .empty-sub{font-size:0.78rem;color:var(--muted);line-height:1.8;}
+
+  /* SETUP WARNING */
+  .setup-warn{margin:2rem auto;max-width:560px;background:#fef3e2;border:1px solid #fcd88a;border-radius:8px;padding:1.25rem 1.5rem;font-size:0.82rem;line-height:1.8;color:#7c4a00;}
+  .setup-warn strong{display:block;font-size:0.9rem;margin-bottom:0.4rem;}
+  .setup-warn code{background:rgba(0,0,0,0.07);padding:0.1rem 0.35rem;border-radius:3px;font-family:monospace;font-size:0.85em;}
+
+  /* LIGHTBOX */
+  .lightbox{display:none;position:fixed;inset:0;z-index:200;background:rgba(26,24,22,0.96);flex-direction:column;align-items:center;justify-content:center;}
+  .lightbox.open{display:flex;}
+  .lb-img-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:1.2rem;width:100%;position:relative;}
+  .lightbox img{max-width:100%;max-height:calc(100vh - 110px);object-fit:contain;border-radius:3px;}
+  .lb-arrow{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.8);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;transition:background 0.2s;}
+  .lb-arrow:hover{background:rgba(255,255,255,0.2);}
+  .lb-arrow.left{left:1rem;}
+  .lb-arrow.right{right:1rem;}
+  .lb-bar{width:100%;background:rgba(26,24,22,0.9);border-top:1px solid rgba(255,255,255,0.08);padding:0.75rem 1.25rem;display:flex;align-items:center;gap:0.65rem;flex-shrink:0;}
+  .lb-filename{flex:1;font-size:0.72rem;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lb-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.75);font-family:'Jost',sans-serif;font-size:0.7rem;padding:0.38rem 0.8rem;border-radius:4px;cursor:pointer;}
+  .lb-btn:hover{background:rgba(255,255,255,0.15);}
+  .lb-dl-btn{background:var(--accent);border:none;color:#fff;font-family:'Jost',sans-serif;font-size:0.7rem;font-weight:500;padding:0.38rem 0.8rem;border-radius:4px;cursor:pointer;}
+  .lb-dl-btn:hover{background:var(--accent-h);}
+
+  /* iOS SAVE MODAL */
+  .ios-modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.92);flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;}
+  .ios-modal.open{display:flex;}
+  .ios-modal-img{max-width:100%;max-height:65vh;object-fit:contain;border-radius:4px;}
+  .ios-modal-guide{margin-top:1.25rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:1rem 1.25rem;text-align:center;color:#fff;font-size:0.82rem;line-height:1.8;max-width:320px;}
+  .ios-modal-guide strong{display:block;font-size:0.95rem;font-weight:500;margin-bottom:0.3rem;}
+  .ios-modal-close{margin-top:1rem;background:transparent;border:1px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.7);font-family:'Jost',sans-serif;font-size:0.75rem;padding:0.5rem 1.5rem;border-radius:4px;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<!-- =============================================
+  ★ ここにGoogle Drive APIキーを1回だけ入れてください
+  Google Cloud Console → Drive API有効化 → 認証情報 → APIキー作成
+================================================ -->
+<script>
+const API_KEY = 'AIzaSyB5icooN6gEMtDLpxMQH2-5JL0NcPvNdz8';
+</script>
+
+<div class="topbar">
+  <div class="logo">Photo <em>Delivery</em></div>
+  <div class="expiry-pill" id="expiryPill"></div>
+</div>
+
+<div class="pw-gate" id="pwGate">
+  <div class="pw-card">
+    <div class="pw-icon">🔑</div>
+    <div class="pw-title">合言葉を入力</div>
+    <div class="pw-sub">このアルバムは保護されています</div>
+    <input type="password" class="pw-input" id="pwGateInput" placeholder="合言葉" onkeydown="if(event.key==='Enter')checkPw()">
+    <button class="pw-btn" onclick="checkPw()">開く</button>
+    <div class="pw-error" id="pwError"></div>
+  </div>
+</div>
+
+<div class="cover" id="cover">
+  <img class="cover-img" id="coverImg" src="" alt="">
+  <div class="cover-grad"></div>
+  <div class="cover-content">
+    <div class="cover-title" id="coverTitle"></div>
+    <div class="cover-eyebrow" id="coverEyebrow"></div>
+    <a class="cover-dl" id="coverDl" href="#" target="_blank" rel="noopener">すべてダウンロード</a>
+  </div>
+</div>
+
+<div id="mainArea">
+  <div class="loading" id="loadingMsg">読み込み中…</div>
+</div>
+
+<div class="ios-modal" id="iosModal">
+  <img class="ios-modal-img" id="iosModalImg" src="" alt="">
+  <div class="ios-modal-guide">
+    <strong>写真を保存する</strong>
+    上の画像を<strong>長押し</strong>して<br>「写真に追加」を選んでください
+  </div>
+  <button class="ios-modal-close" onclick="closeIosModal()">閉じる</button>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <div class="lb-img-wrap">
+    <img id="lbImg" src="" alt="">
+    <button class="lb-arrow left" onclick="lbNav(-1)">&#8592;</button>
+    <button class="lb-arrow right" onclick="lbNav(1)">&#8594;</button>
+  </div>
+  <div class="lb-bar">
+    <div class="lb-filename" id="lbFilename"></div>
+    <button class="lb-dl-btn" onclick="lbDownload()">↓ DL</button>
+    <button class="lb-btn" onclick="closeLightbox()">✕ 閉じる</button>
+  </div>
+</div>
+
+<script>
+let photos = [], currentIdx = 0, config = {};
+
+const FONTS = {
+  'noto-serif': { url: 'https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@200;300;400&display=swap', family: "'Noto Serif JP', serif", weight: '300' },
+  'noto-sans':  { url: 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;200;300&display=swap', family: "'Noto Sans JP', sans-serif", weight: '200' },
+};
+
+function loadCoverFont(key) {
+  const f = FONTS[key];
+  if (!f) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = f.url;
+  document.head.appendChild(link);
+  document.getElementById('coverTitle').style.fontFamily = f.family;
+  document.getElementById('coverTitle').style.fontWeight = f.weight;
+}
+
+function getConfig() {
+  const params = new URLSearchParams(window.location.search);
+  const d = params.get('d');
+  if (!d) return null;
+  try { return JSON.parse(decodeURIComponent(escape(atob(d)))); }
+  catch(e) { return null; }
+}
+
+function setExpiryPill(dateStr) {
+  const pill = document.getElementById('expiryPill');
+  if (!dateStr) return;
+  const exp = new Date(dateStr), today = new Date();
+  today.setHours(0,0,0,0);
+  const diff = Math.round((exp - today) / 86400000);
+  pill.textContent = '公開期限 ' + dateStr.replace(/-/g,'.');
+  pill.className = 'expiry-pill' + (diff < 0 ? ' expired' : diff <= 7 ? ' warn' : '');
+  pill.style.display = '';
+}
+
+function showSetupWarning() {
+  document.getElementById('loadingMsg').remove();
+  document.getElementById('mainArea').innerHTML =
+    '<div class="setup-warn">'
+    + '<strong>⚠️ APIキーが設定されていません</strong>'
+    + 'delivery.html をテキストエディタで開き、上部の<br>'
+    + '<code>const API_KEY = \'\';</code><br>'
+    + 'の <code>\'\'</code> の中にGoogle Drive APIキーを貼り付けて、Netlifyに再アップロードしてください。'
+    + '</div>';
+}
+
+async function loadFromDrive(folderId) {
+  const url = 'https://www.googleapis.com/drive/v3/files'
+    + '?q=' + encodeURIComponent("'" + folderId + "' in parents and mimeType contains 'image/'")
+    + '&fields=files(id,name,mimeType,createdTime)'
+    + '&orderBy=name&pageSize=1000&key=' + API_KEY;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  data.files.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}));
+  return data.files.map(f => ({
+    name: f.name,
+    created: f.createdTime || '',
+    thumb: 'https://drive.google.com/thumbnail?id=' + f.id + '&sz=w600',
+    full:  'https://drive.google.com/thumbnail?id=' + f.id + '&sz=w1600',
+    dl:    'https://drive.google.com/uc?id=' + f.id + '&export=download',
+  }));
+}
+
+function showError(msg) {
+  document.getElementById('mainArea').innerHTML =
+    '<div class="empty-state"><div class="empty-title">エラー</div>'
+    + '<div class="empty-sub">' + msg + '</div></div>';
+}
+
+function applyBg(color) {
+  if (!color) return;
+  const dark = color === '#1a1816' || parseInt(color.slice(1),16) < 0x555555;
+  document.body.style.background = color;
+  document.querySelector('.topbar').style.background = color;
+  document.querySelector('.topbar').style.borderBottomColor = dark ? '#333' : '#ebebeb';
+  if (dark) {
+    document.body.style.color = '#f0ede8';
+    document.querySelector('.logo').style.color = '#f0ede8';
+  }
+}
+
+
+function getColCount() {
+  const w = window.innerWidth;
+  if (w > 1100) return 4;
+  if (w > 720) return 3;
+  if (w > 400) return 2;
+  return 1;
+}
+
+function renderGallery(list) {
+  photos = list;
+  const wrap = document.createElement('div');
+  wrap.className = 'gallery-wrap';
+  const gallery = document.createElement('div');
+  gallery.className = 'gallery';
+
+  const n = getColCount();
+  const cols = Array.from({length: n}, () => {
+    const c = document.createElement('div');
+    c.className = 'gallery-col';
+    gallery.appendChild(c);
+    return c;
+  });
+
+  list.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'photo-card';
+    card.innerHTML = '<img src="' + p.thumb + '" alt="' + p.name + '" loading="lazy">'
+      + '<div class="photo-card-overlay">'
+      + '<button class="card-dl-btn" onclick="dlOne(' + i + ');event.stopPropagation()" title="ダウンロード">↓</button>'
+      + '</div>';
+    card.addEventListener('click', () => openLightbox(i));
+    cols[i % n].appendChild(card);
+  });
+
+  wrap.appendChild(gallery);
+  document.getElementById('mainArea').innerHTML = '';
+  document.getElementById('mainArea').appendChild(wrap);
+}
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (!photos.length) return;
+    const gallery = document.querySelector('.gallery');
+    if (gallery && getColCount() !== gallery.children.length) renderGallery(photos);
+  }, 200);
+});
+
+function renderPhotos(list) {
+  applyBg(config.bg);
+  const coverIdx = (config.cover >= 0 && config.cover < list.length) ? config.cover : 0;
+  document.getElementById('coverImg').src = list[coverIdx].full;
+  if (config.title) document.getElementById('coverTitle').textContent = config.title;
+  if (config.date) document.getElementById('coverEyebrow').textContent = config.date;
+  document.getElementById('coverDl').href = 'https://drive.google.com/drive/folders/' + config.folder;
+  if (config.font) loadCoverFont(config.font);
+  if (config.titleSize) document.getElementById('coverTitle').style.fontSize = config.titleSize + 'rem';
+  document.getElementById('cover').style.display = 'block';
+  renderGallery(list);
+}
+
+function checkPw() {
+  if (document.getElementById('pwGateInput').value === config.pw) {
+    document.getElementById('pwGate').classList.remove('open');
+    startLoad();
+  } else {
+    document.getElementById('pwError').textContent = '合言葉が違います';
+    document.getElementById('pwGateInput').value = '';
+    document.getElementById('pwGateInput').focus();
+  }
+}
+
+async function startLoad() {
+  if (!API_KEY) { showSetupWarning(); return; }
+  const expired = config.expiry && new Date(config.expiry) < new Date(new Date().setHours(0,0,0,0));
+  if (expired) {
+    showError('このアルバムの公開期限が終了しました。');
+    return;
+  }
+  try {
+    const list = await loadFromDrive(config.folder);
+    if (list.length === 0) showError('フォルダに画像が見つかりませんでした。<br>フォルダが「リンクを知っている全員」に公開されているか確認してください。');
+    else renderPhotos(list);
+  } catch(e) {
+    showError('読み込みエラー: ' + e.message + '<br><br>・フォルダが「リンクを知っている全員」に公開されているか確認してください<br>・APIキーが正しいか確認してください');
+  }
+}
+
+window.addEventListener('load', async () => {
+  config = getConfig();
+  if (!config) {
+    showError('URLが正しくありません。管理画面から納品URLを生成してください。');
+    return;
+  }
+  setExpiryPill(config.expiry);
+  if (config.pw) {
+    document.getElementById('mainArea').innerHTML = '';
+    document.getElementById('pwGate').classList.add('open');
+    setTimeout(() => document.getElementById('pwGateInput').focus(), 100);
+  } else {
+    await startLoad();
+  }
+});
+
+function dlOne(i) {
+  const a = document.createElement('a');
+  a.href = photos[i].dl;
+  a.download = photos[i].name;
+  a.target = '_blank';
+  a.click();
+}
+function dlAll() { photos.forEach((_,i) => setTimeout(() => dlOne(i), i * 400)); }
+function openLightbox(i) { currentIdx = i; updateLightbox(); document.getElementById('lightbox').classList.add('open'); document.body.style.overflow = 'hidden'; }
+function updateLightbox() {
+  const p = photos[currentIdx];
+  document.getElementById('lbImg').src = p.full;
+  document.getElementById('lbFilename').textContent = (currentIdx+1) + ' / ' + photos.length + '　' + p.name;
+}
+function lbNav(dir) { currentIdx = (currentIdx + dir + photos.length) % photos.length; updateLightbox(); }
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); document.body.style.overflow = ''; }
+function lbDownload() { dlOne(currentIdx); }
+document.addEventListener('keydown', e => {
+  if (document.getElementById('lightbox').classList.contains('open')) {
+    if (e.key === 'ArrowLeft') lbNav(-1);
+    if (e.key === 'ArrowRight') lbNav(1);
+    if (e.key === 'Escape') closeLightbox();
+  }
+});
+</script>
+</body>
+</html>
