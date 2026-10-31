@@ -326,20 +326,47 @@ function copyUrl() {
 async function shortenUrl() {
   const url = document.getElementById('resultUrl').textContent.trim();
   if (!url) return;
+
   const btn = document.getElementById('shortenBtn');
   btn.disabled = true;
   btn.textContent = '作成中…';
+
   try {
-    const res = await fetch('https://is.gd/create.php?format=simple&url=' + encodeURIComponent(url));
-    const short = await res.text();
-    if (!short.startsWith('http')) throw new Error('short url error');
+    const res = await fetch(
+      'https://photo-delivery-shortener.dannaarimasuze.workers.dev/',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url })
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error('Shortening request failed');
+    }
+
+    const data = await res.json();
+    const short = data.shortUrl;
+
+    if (
+      typeof short !== 'string' ||
+      !short.startsWith('https://is.gd/')
+    ) {
+      throw new Error('Invalid short URL');
+    }
+
     document.getElementById('shortUrlBox').textContent = short;
     document.getElementById('shortUrlRow').style.display = 'block';
     btn.textContent = '再作成';
-  } catch(e) {
+
+  } catch (e) {
+    console.error('短縮URL発行エラー:', e);
     alert('短縮URLの作成に失敗しました。時間をおいてもう一度お試しください。');
     btn.textContent = '短縮URLを作成';
   }
+
   btn.disabled = false;
 }
 
